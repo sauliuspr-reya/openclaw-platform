@@ -1,0 +1,196 @@
+# Example: Code Review Swarm
+# Swarm of agents collaborating on code review
+---
+apiVersion: platform.openclaw.io/v1alpha1
+kind: OpenClawSwarm
+metadata:
+  name: code-review-swarm
+  namespace: openclaw
+spec:
+  goal: |
+    Review the pull request for code quality, security issues, 
+    and adherence to coding standards. Provide actionable feedback.
+  
+  orchestratorRef: review-orchestrator
+  
+  workerSelector:
+    matchLabels:
+      platform.openclaw.io/swarm-enabled: "true"
+      platform.openclaw.io/group: engineering
+  
+  minWorkers: 2
+  maxWorkers: 5
+  
+  timeout: 30m
+  
+  group: engineering
+  
+  constraints:
+    review_type: "comprehensive"
+    include_security: "true"
+    check_tests: "true"
+---
+# Orchestrator Agent
+apiVersion: platform.openclaw.io/v1alpha1
+kind: OpenClawAgent
+metadata:
+  name: review-orchestrator
+  namespace: openclaw
+  labels:
+    platform.openclaw.io/swarm-enabled: "true"
+    platform.openclaw.io/group: engineering
+spec:
+  containerMode: immutable
+  immutableProfile: minimal
+  
+  identity:
+    inline: |
+      # Code Review Orchestrator
+      
+      ## Role
+      Swarm orchestrator for code review tasks
+      
+      ## Responsibilities
+      - Split code review into logical shards (by file, by concern)
+      - Assign shards to workers based on expertise
+      - Merge findings into cohesive review
+      - Prioritize and deduplicate feedback
+  
+  memory:
+    natsUrl: nats://nats.openclaw.svc:4222
+    company:
+      enabled: true
+      mode: readonly
+    group:
+      enabled: true
+      name: engineering
+      mode: readwrite
+    swarm:
+      enabled: true
+      autoJoin: true
+    individual:
+      enabled: true
+  
+  swarm:
+    enabled: true
+    role: orchestrator
+    groups: [engineering]
+    maxWorkers: 10
+    shardTimeout: 5m
+  
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+---
+# Worker Agent - Code Quality Focus
+apiVersion: platform.openclaw.io/v1alpha1
+kind: OpenClawAgent
+metadata:
+  name: review-worker-quality
+  namespace: openclaw
+  labels:
+    platform.openclaw.io/swarm-enabled: "true"
+    platform.openclaw.io/group: engineering
+    platform.openclaw.io/expertise: code-quality
+spec:
+  containerMode: immutable
+  immutableProfile: web  # Has linting tools
+  
+  identity:
+    inline: |
+      # Code Quality Reviewer
+      
+      ## Focus
+      - Code readability and maintainability
+      - Adherence to coding standards
+      - Naming conventions
+      - Code organization
+  
+  memory:
+    natsUrl: nats://nats.openclaw.svc:4222
+    company:
+      enabled: true
+      mode: readonly
+    group:
+      enabled: true
+      name: engineering
+      mode: readwrite
+    swarm:
+      enabled: true
+      autoJoin: true
+    individual:
+      enabled: true
+  
+  swarm:
+    enabled: true
+    role: worker
+    groups: [engineering]
+    maxShards: 3
+  
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+---
+# Worker Agent - Security Focus
+apiVersion: platform.openclaw.io/v1alpha1
+kind: OpenClawAgent
+metadata:
+  name: review-worker-security
+  namespace: openclaw
+  labels:
+    platform.openclaw.io/swarm-enabled: "true"
+    platform.openclaw.io/group: engineering
+    platform.openclaw.io/expertise: security
+spec:
+  containerMode: immutable
+  immutableProfile: security
+  
+  identity:
+    inline: |
+      # Security Reviewer
+      
+      ## Focus
+      - Security vulnerabilities
+      - Input validation
+      - Authentication/authorization
+      - Sensitive data handling
+      - Dependency vulnerabilities
+  
+  memory:
+    natsUrl: nats://nats.openclaw.svc:4222
+    company:
+      enabled: true
+      mode: readonly
+    group:
+      enabled: true
+      name: engineering
+      mode: readwrite
+      crossGroupRead:
+        - security
+    swarm:
+      enabled: true
+      autoJoin: true
+    individual:
+      enabled: true
+  
+  swarm:
+    enabled: true
+    role: worker
+    groups: [engineering, security]
+    maxShards: 3
+  
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"

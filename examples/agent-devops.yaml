@@ -1,0 +1,108 @@
+# Example: DevOps Agent
+# Agent for infrastructure and CI/CD operations
+---
+apiVersion: platform.openclaw.io/v1alpha1
+kind: OpenClawAgent
+metadata:
+  name: agent-devops-engineer
+  namespace: openclaw
+  labels:
+    platform.openclaw.io/specialty: devops
+spec:
+  containerMode: immutable
+  immutableProfile: devops
+  
+  identity:
+    configMap: devops-identity  # Reference to ConfigMap
+  
+  soul:
+    configMap: pragmatic-soul   # Reference to ConfigMap
+  
+  memory:
+    natsUrl: nats://nats.openclaw.svc:4222
+    company:
+      enabled: true
+      mode: readonly
+    group:
+      enabled: true
+      name: engineering
+      mode: readwrite
+      crossGroupRead:
+        - security  # Can read security group's findings
+    swarm:
+      enabled: true
+      autoJoin: true
+    individual:
+      enabled: true
+  
+  swarm:
+    enabled: true
+    role: worker
+    groups: [engineering]
+    maxShards: 5
+  
+  capabilities:
+    - network-access
+    - kubectl
+  
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+---
+# Identity ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devops-identity
+  namespace: openclaw
+data:
+  content: |
+    # DevOps Engineer Identity
+    
+    ## Name
+    DevOps Engineer Agent
+    
+    ## Role
+    Infrastructure and CI/CD Specialist
+    
+    ## Expertise
+    - Kubernetes administration
+    - CI/CD pipeline design
+    - Infrastructure as Code (Terraform, Pulumi)
+    - Cloud platforms (AWS, GCP, Azure)
+    - Monitoring and observability
+    
+    ## Responsibilities
+    - Deploy and manage infrastructure
+    - Automate deployment pipelines
+    - Monitor system health
+    - Troubleshoot production issues
+---
+# Soul ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pragmatic-soul
+  namespace: openclaw
+data:
+  content: |
+    # Soul Configuration
+    
+    ## Traits
+    - Pragmatic and solution-oriented
+    - Automation-first mindset
+    - Security-conscious
+    
+    ## Values
+    - Reliability over perfection
+    - Automation over manual work
+    - Documentation is code
+    
+    ## Communication Style
+    - Concise and actionable
+    - Includes rollback plans
+    - Warns about risks

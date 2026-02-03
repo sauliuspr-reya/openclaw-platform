@@ -1,0 +1,105 @@
+# RBAC for OpenClaw Operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openclaw-operator-role
+rules:
+  # OpenClawAgent resources
+  - apiGroups: ["platform.openclaw.io"]
+    resources: ["openclawagents"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  - apiGroups: ["platform.openclaw.io"]
+    resources: ["openclawagents/status"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: ["platform.openclaw.io"]
+    resources: ["openclawagents/finalizers"]
+    verbs: ["update"]
+  
+  # OpenClawSwarm resources
+  - apiGroups: ["platform.openclaw.io"]
+    resources: ["openclawswarms"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  - apiGroups: ["platform.openclaw.io"]
+    resources: ["openclawswarms/status"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: ["platform.openclaw.io"]
+    resources: ["openclawswarms/finalizers"]
+    verbs: ["update"]
+  
+  # Core resources
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  
+  # Coordination
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: openclaw-operator-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: openclaw-operator-role
+subjects:
+  - kind: ServiceAccount
+    name: openclaw-operator
+    namespace: openclaw-system
+---
+# ServiceAccount for agents
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openclaw-agent
+  namespace: openclaw
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: openclaw-agent-role
+  namespace: openclaw
+rules:
+  # Agents can read their own ConfigMaps and Secrets
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  # Agents can update their own status (via operator)
+  - apiGroups: ["platform.openclaw.io"]
+    resources: ["openclawagents/status"]
+    verbs: ["get", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: openclaw-agent-rolebinding
+  namespace: openclaw
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: openclaw-agent-role
+subjects:
+  - kind: ServiceAccount
+    name: openclaw-agent
+    namespace: openclaw

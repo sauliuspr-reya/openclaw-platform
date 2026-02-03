@@ -1,0 +1,31 @@
+# Example: Minimal Agent
+# Basic agent with minimal resources, good for simple tasks
+---
+apiVersion: platform.openclaw.io/v1alpha1
+kind: OpenClawAgent
+metadata:
+  name: agent-minimal-example
+  namespace: openclaw
+spec:
+  containerMode: immutable
+  immutableProfile: minimal
+  
+  memory:
+    natsUrl: nats://nats.openclaw.svc:4222
+    company:
+      enabled: true
+      mode: readonly
+    group:
+      enabled: true
+      name: engineering
+      mode: readwrite
+    individual:
+      enabled: true
+  
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"

@@ -1,0 +1,88 @@
+# Example: Dynamic Agent
+# Agent that can install tools at runtime
+---
+apiVersion: platform.openclaw.io/v1alpha1
+kind: OpenClawAgent
+metadata:
+  name: agent-dynamic-explorer
+  namespace: openclaw
+  labels:
+    platform.openclaw.io/specialty: general
+spec:
+  containerMode: dynamic
+  immutableProfile: minimal  # Start from minimal base
+  
+  mutability:
+    enabled: true
+    toolPaths:
+      - /opt/openclaw/tools
+      - /opt/openclaw/runtime
+    persistTools: true
+    toolCachePVC: agent-tool-cache  # Persist tools across restarts
+  
+  identity:
+    inline: |
+      # Dynamic Explorer Identity
+      
+      ## Name
+      Dynamic Explorer Agent
+      
+      ## Role
+      General-purpose problem solver with tool installation capabilities
+      
+      ## Expertise
+      - Adapts to new challenges
+      - Can install required tools on-the-fly
+      - Explores novel solutions
+      
+      ## Responsibilities
+      - Handle tasks that don't fit standard profiles
+      - Install and configure required tools
+      - Document tool requirements for future optimization
+  
+  memory:
+    natsUrl: nats://nats.openclaw.svc:4222
+    company:
+      enabled: true
+      mode: readonly
+    group:
+      enabled: true
+      name: engineering
+      mode: readwrite
+    swarm:
+      enabled: true
+      autoJoin: true
+    individual:
+      enabled: true
+  
+  swarm:
+    enabled: true
+    role: worker
+    groups: [engineering, research]
+    maxShards: 2
+  
+  capabilities:
+    - network-access
+    - apt-install
+    - binary-download
+  
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+---
+# PVC for tool persistence
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: agent-tool-cache
+  namespace: openclaw
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

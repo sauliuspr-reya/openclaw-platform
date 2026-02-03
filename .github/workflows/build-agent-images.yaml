@@ -1,0 +1,197 @@
+# Build and publish OpenClaw Agent profile images to GCP Artifact Registry
+name: Build Agent Images
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'deploy/images/**'
+      - '.github/workflows/build-agent-images.yaml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'deploy/images/**'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Profile to build (or "all")'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - base
+          - minimal
+          - python-ml
+          - devops
+          - web
+          - data
+          - security
+      tag:
+        description: 'Image tag (defaults to git sha)'
+        required: false
+        type: string
+
+env:
+  REGISTRY: europe-west3-docker.pkg.dev
+  PROJECT_ID: mainnet-473609
+  REPOSITORY: reya
+  IMAGE_PREFIX: openclaw-agent
+
+jobs:
+  # Build base image first (others depend on it)
+  build-base:
+    name: Build Base Image
+    runs-on: ubuntu-latest
+    if: inputs.profile == 'all' || inputs.profile == 'base' || inputs.profile == ''
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      base-tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_PREFIX }}-base
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+
+      - name: Build and push base image
+        uses: docker/build-push-action@v5
+        with:
+          context: deploy/images/base
+          file: deploy/images/base/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha,scope=base
+          cache-to: type=gha,mode=max,scope=base
+
+  # Build profile images in parallel (depend on base)
+  build-profiles:
+    name: Build ${{ matrix.profile }}
+    runs-on: ubuntu-latest
+    needs: build-base
+    if: always() && (needs.build-base.result == 'success' || needs.build-base.result == 'skipped')
+    permissions:
+      contents: read
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+          - minimal
+          - python-ml
+          - devops
+          - web
+          - data
+          - security
+        exclude:
+          - profile: ${{ inputs.profile != 'all' && inputs.profile != '' && inputs.profile != 'minimal' && 'minimal' || 'NONE' }}
+          - profile: ${{ inputs.profile != 'all' && inputs.profile != '' && inputs.profile != 'python-ml' && 'python-ml' || 'NONE' }}
+          - profile: ${{ inputs.profile != 'all' && inputs.profile != '' && inputs.profile != 'devops' && 'devops' || 'NONE' }}
+          - profile: ${{ inputs.profile != 'all' && inputs.profile != '' && inputs.profile != 'web' && 'web' || 'NONE' }}
+          - profile: ${{ inputs.profile != 'all' && inputs.profile != '' && inputs.profile != 'data' && 'data' || 'NONE' }}
+          - profile: ${{ inputs.profile != 'all' && inputs.profile != '' && inputs.profile != 'security' && 'security' || 'NONE' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.profile }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+
+      - name: Update Dockerfile base image reference
+        run: |
+          # Update the FROM line to use our Artifact Registry base image
+          sed -i 's|FROM ghcr.io/openclaw/agent:base|FROM ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_PREFIX }}-base:latest|g' deploy/images/${{ matrix.profile }}/Dockerfile
+
+      - name: Build and push ${{ matrix.profile }} image
+        uses: docker/build-push-action@v5
+        with:
+          context: deploy/images/${{ matrix.profile }}
+          file: deploy/images/${{ matrix.profile }}/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: type=gha,scope=${{ matrix.profile }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.profile }}
+
+  # Summary job
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-base, build-profiles]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "### Agent Images Build Summary :package:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Profile | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| base | ${{ needs.build-base.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| profiles | ${{ needs.build-profiles.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** \`${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/\`" >> $GITHUB_STEP_SUMMARY

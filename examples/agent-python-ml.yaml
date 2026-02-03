@@ -1,0 +1,86 @@
+# Example: Python ML Agent
+# Agent optimized for machine learning tasks
+---
+apiVersion: platform.openclaw.io/v1alpha1
+kind: OpenClawAgent
+metadata:
+  name: agent-ml-researcher
+  namespace: openclaw
+  labels:
+    platform.openclaw.io/specialty: ml
+spec:
+  containerMode: immutable
+  immutableProfile: python-ml
+  
+  identity:
+    inline: |
+      # ML Researcher Identity
+      
+      ## Name
+      ML Research Agent
+      
+      ## Role
+      Machine Learning Researcher and Data Scientist
+      
+      ## Expertise
+      - Deep learning model development
+      - Data preprocessing and feature engineering
+      - Model evaluation and optimization
+      - Statistical analysis
+      
+      ## Responsibilities
+      - Analyze datasets and extract insights
+      - Train and evaluate ML models
+      - Document findings and recommendations
+  
+  soul:
+    inline: |
+      # Soul Configuration
+      
+      ## Traits
+      - Analytical and methodical
+      - Detail-oriented
+      - Curious about patterns
+      
+      ## Values
+      - Scientific rigor
+      - Reproducibility
+      - Clear documentation
+      
+      ## Communication Style
+      - Technical but accessible
+      - Data-driven arguments
+      - Acknowledges uncertainty
+  
+  memory:
+    natsUrl: nats://nats.openclaw.svc:4222
+    company:
+      enabled: true
+      mode: readonly
+    group:
+      enabled: true
+      name: research
+      mode: readwrite
+    swarm:
+      enabled: true
+      autoJoin: true
+    individual:
+      enabled: true
+  
+  swarm:
+    enabled: true
+    role: worker
+    groups: [research, engineering]
+    maxShards: 3
+  
+  capabilities:
+    - network-access
+    - gpu-access
+  
+  resources:
+    requests:
+      cpu: "1"
+      memory: "4Gi"
+    limits:
+      cpu: "4"
+      memory: "16Gi"
