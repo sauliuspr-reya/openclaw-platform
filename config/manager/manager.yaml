@@ -34,7 +34,7 @@ spec:
       serviceAccountName: openclaw-operator
       containers:
         - name: manager
-          image: ghcr.io/openclaw/operator:latest
+          image: europe-west3-docker.pkg.dev/mainnet-473609/reya/openclaw-operator:latest
           command:
             - /manager
           args:
@@ -73,3 +73,5 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
       terminationGracePeriodSeconds: 10
+      nodeSelector:
+        workload-type: ops
