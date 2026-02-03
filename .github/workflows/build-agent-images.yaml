@@ -88,7 +88,7 @@ jobs:
             type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
 
       - name: Build and push base image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: deploy/images/base
           file: deploy/images/base/Dockerfile
@@ -166,7 +166,7 @@ jobs:
           sed -i 's|FROM ghcr.io/openclaw/agent:base|FROM ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_PREFIX }}-base:latest|g' deploy/images/${{ matrix.profile }}/Dockerfile
 
       - name: Build and push ${{ matrix.profile }} image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: deploy/images/${{ matrix.profile }}
           file: deploy/images/${{ matrix.profile }}/Dockerfile
