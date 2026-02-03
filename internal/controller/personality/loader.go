@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -293,7 +294,7 @@ func BuildInlineConfigMap(name, namespace string, personality *LoadedPersonality
 	}
 
 	return &corev1.ConfigMap{
-		ObjectMeta: corev1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      name + "-personality",
 			Namespace: namespace,
 			Labels: map[string]string{
