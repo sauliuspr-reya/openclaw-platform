@@ -81,7 +81,7 @@ jobs:
             type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
 
       - name: Build and push Hephaestus
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: reya-openclaw/moltbot/docker
           file: reya-openclaw/moltbot/docker/Dockerfile
@@ -147,7 +147,7 @@ jobs:
             type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
 
       - name: Build and push OpenClaw bot
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: reya-openclaw/openclaw/docker
           file: reya-openclaw/openclaw/docker/Dockerfile
@@ -236,7 +236,7 @@ jobs:
 
       - name: Build and push ${{ matrix.variant }}
         if: steps.check.outputs.exists == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: reya-openclaw/openclaw/docker
           file: reya-openclaw/openclaw/docker/Dockerfile
