@@ -1,7 +1,7 @@
 # OpenClaw Agent Base Image
 # This is the foundation for all agent images - minimal and secure
 
-FROM ubuntu:22.04 AS base
+FROM ubuntu:24.04 AS base
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
